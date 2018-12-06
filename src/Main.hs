@@ -33,7 +33,11 @@ data Status = Green | Yellow | Red
 -- Yellow
 
 
--- * Why do we need this?
+-- * The motivation
+
+-- | Why do we need this extension?
+-- To see that, we might need to review what we have been suffering from.
+--
 -- Let's think of IO-like applicative.
 
 newtype IO' a = IO' a
@@ -46,7 +50,7 @@ instance Applicative IO' where
   pure x = IO' x
   (IO' f) <*> (IO' x) = IO' (f x)
 
--- | When defining instance of @Semigroup@,
+-- | When defining an instance of @Semigroup@,
 -- it will naturally unwrap, apply the operator and rewrap.
 
 instance Semigroup a => Semigroup (IO' a) where
@@ -76,13 +80,13 @@ instance Semigroup a => Semigroup (ST' a) where
 
 
 -- | Now we feel annoyed because of the duplicated code.
--- Can we write @Semigroup@ instances in common?
+-- Can we make @Semigroup@ instances at once?
 -- Let's see...
 --
 -- instance (Applicative f, Semigroup a) => Semigroup (f a) where
 --   (<>) = liftA2 (<>)
 
--- | This does not work well.
+-- | Unfortunately, this does not work well.
 -- Because in this way, the instance is applied on all @Applicative@ @Semigroup@
 -- instances without any exception.
 
@@ -121,10 +125,11 @@ instance Applicative List where
 
 -- * Now what happens if we have a generalized version of @Semigroup@ instance?
 -- It would work like:
---
+
 -- instance Semigroup a => Semigroup (List a)
 --   where (<>) = liftA2 (<>)
---
+
+--- |
 -- >>> Cons Yellow (Cons Red Nil) <> Cons Green (Cons Yellow Nil)
 -- Cons Yellow (Cons Yellow (Cons Red (Cons Red Nil)))
 
@@ -137,12 +142,14 @@ instance Semigroup (List a) where
   xs <> Nil = xs
   Cons x xs <> ys = Cons x $ xs <> ys
 
--- | This works:
+-- | Let's see if this works as we expect:
 --
 -- >>> Cons Yellow (Cons Red Nil) <> Cons Green (Cons Yellow Nil)
 -- Cons Yellow (Cons Red (Cons Green (Cons Yellow Nil)))
 
--- * Like this way, we cannot write @Applicative@ @Semigroup@ instances even
+-- | Yeah, this is what we want!
+
+-- | Like this way, we cannot write @Applicative@ @Semigroup@ instances even
 -- thogh the implementations are the same like among IO and ST.
 -- This is because once an instances defiened, there is no way to revert it.
 --
@@ -215,6 +222,7 @@ instance Alternative List' where
 -- >>> List' Nil <> List' (Cons Red Nil) <> List' (Cons Green Nil)
 -- List' (Cons Red Nil)
 
+-- | Yes, this is appending in an alternative way!
 
 main :: IO ()
 main = putStrLn "Deriving GoodCodingLife via Haskell!"
