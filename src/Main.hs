@@ -1,11 +1,20 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE KindSignatures      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+
+{-# LANGUAGE DerivingVia         #-}
 module Main where
 
-import Prelude
+import           Prelude
 
-import Data.Semigroup (Semigroup, First(..))
-import Control.Applicative (Alternative(..), liftA2)
+import           Control.Applicative (Alternative (..), liftA2)
+import           Data.Proxy          (Proxy (..))
+import           Data.Semigroup      (First (..), Semigroup)
+import           GHC.TypeLits
+import           Test.QuickCheck
+
 
 -- * Introduction
 -- What can we do with DerivingVia?
@@ -98,7 +107,7 @@ data List a = Nil | Cons a (List a)
   deriving (Show)
 
 instance Functor List where
-  fmap _ Nil = Nil
+  fmap _ Nil         = Nil
   fmap f (Cons x xs) = Cons (f x) $ fmap f xs
 
 instance Applicative List where
@@ -107,7 +116,7 @@ instance Applicative List where
   _ <*> Nil = Nil
   Cons f fs <*> xs = fs' $ fmap f xs
     where
-      fs' Nil = fs <*> xs
+      fs' Nil           = fs <*> xs
       fs' (Cons x' xs') = Cons x' (fs' xs')
 
 -- | Note that this @Applicatie@ instance works as a product of functions and
@@ -224,7 +233,90 @@ instance Alternative List' where
 
 -- | Yes, this is appending in an alternative way!
 
+
+-- * Case study of QuickCheck
+--
+-- QuickCheck provides newtype adapters so that users can put some term level
+-- constraints on generated values.
+-- @NonNegative@ is one of those modifiers.
+
+-- newtype NonNegative a = NonNegative { getNonNegative :: a }
+-- instance (Num a, Ord a, Arbitrary a) => Arbitrary (NonNegative a)
+
+-- | When we have data type which represents non-negative length we can go like:
+
+newtype Length = Length Int
+  deriving Show
+  deriving Arbitrary via NonNegative Int
+
+-- |
+-- prop> \(Length i) -> i >= 0
+
+-- | QuickCheck also provides @Large@ modifier, whose definition is:
+
+-- newtype Large a = Large { getLarge :: a }
+-- instance (Integral a, Bounded a) => Arbitrary (Large a)
+
+-- | Like with this modifier, we can nicely compose modifiers:
+
+newtype Huge = Huge Int
+  deriving Show
+  deriving Arbitrary via (NonNegative (Large Int))
+
+-- |
+-- prop> \(Huge i) -> i >= 0
+
+-- | This double-wrapped deriving via still works.
+-- It shares the same representation between @Huge Int@ and
+-- @NonNegative (Large Int)@, thus be able to reuse the @Arbitrary@ instance from
+-- @NonNegative Large@.
+
+
+-- | It also available to define an @Arbitrary@ instance from an arbitrary
+-- function.
+
+newtype BoundedEnum a = BoundedEnum a
+
+instance (Bounded a, Enum a) => Arbitrary (BoundedEnum a) where
+  arbitrary = BoundedEnum <$> arbitraryBoundedEnum
+
+data Weekday = Mo | Tu | We | Th | Fr | Sa | Su
+  deriving (Eq, Show, Bounded, Enum)
+  deriving Arbitrary via BoundedEnum Weekday
+
+nextWorkday :: Weekday -> Weekday
+nextWorkday Mo = Tu
+nextWorkday Tu = We
+nextWorkday We = Th
+nextWorkday Th = Fr
+nextWorkday Fr = Mo
+nextWorkday Sa = Mo
+nextWorkday Su = Mo
+
+-- |
+-- prop> \(wd :: Weekday) -> fromEnum (nextWorkday wd) == fromEnum wd + 1 || nextWorkday wd == Mo
+
+
+-- | Another example of using type level constraints.
+
+newtype Between (l :: Nat) (u :: Nat) = Between Integer
+
+instance (KnownNat l, KnownNat u) => Arbitrary (Between l u) where
+  arbitrary = Between <$> choose (natVal @l Proxy, natVal @u Proxy)
+
+newtype Year = Year Integer
+  deriving Show
+  deriving Arbitrary via (Between 1900 2100)
+
+-- |
+-- prop> \(Year year) -> 1900 <= year && year <= 2100
+
+
+
+
+
+
+
+
 main :: IO ()
 main = putStrLn "Deriving GoodCodingLife via Haskell!"
-
-

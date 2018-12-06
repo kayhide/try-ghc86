@@ -1,3 +1,5 @@
+*.cabal
+
 ### https://raw.github.com/github/gitignore/c0c1a480a906df0e023f3250cf2ad82f1612be67/Haskell.gitignore
 
 dist
