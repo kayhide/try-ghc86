@@ -1,0 +1,27 @@
+name:                try-ghc86
+version:             0.1.0.0
+#synopsis:
+#description:
+homepage:            https://github.com/kayhide/try-ghc86#readme
+license:             BSD3
+author:              Hideaki KAWAI
+maintainer:          kayhide@gmail.com
+copyright:           kayhide
+category:            Web
+extra-source-files:
+  - README.md
+
+dependencies:
+  - base >= 4.7 && < 5
+
+executables:
+  try-ghc86:
+    source-dirs:      src
+    main:             Main.hs
+
+tests:
+  doctest:
+    source-dirs:      test
+    main:             doctest.hs
+    dependencies:
+      - doctest
