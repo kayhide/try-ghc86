@@ -11,7 +11,7 @@ import           Prelude
 
 import           Control.Applicative (Alternative (..), liftA2)
 import           Data.Proxy          (Proxy (..))
-import           Data.Semigroup      (First (..), Semigroup)
+import           Data.Semigroup      (First (..), Sum(..), Product(..), Semigroup)
 import           GHC.TypeLits
 import           Test.QuickCheck
 
@@ -312,9 +312,15 @@ newtype Year = Year Integer
 -- prop> \(Year year) -> 1900 <= year && year <= 2100
 
 
+-- * Example of Pair
 
+newtype Pair = Pair (Int, Int)
+  deriving Show
+  deriving Semigroup via (Sum Int, Product Int)
 
-
+-- |
+-- >>> Pair (3, 4) <> Pair (5, 6)
+-- Pair (8,24)
 
 
 
